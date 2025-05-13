@@ -1,3 +1,9 @@
+# GPU Deep Learning Playground
+
+My learning log for the fundamentals of GPU programming and deep learning optimization by exploring GPU acceleration for deep learning: documentation, implementations, and best practices for CUDA and Triton.
+
+The weeks are numbered from 0 to 8, but I'm pretty sure this is not going to be a week-by-week linear path. I've got other things I need to be doing within my pursuit of studying & building, but I'm going to try to make time to do this. Hoping to complete this by the end of the year.
+
 ## Phase 0: Prerequisites (Week 0)
 
 Before diving into GPU programming, the following would be helpful:
