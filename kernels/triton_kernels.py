@@ -25,3 +25,8 @@ def add(x: torch.Tensor, y: torch.Tensor):
 
     add_kernel[grid](x, y, output, n_elements, BLOCK_SIZE=1024)
     return output
+
+if __name__ == "__main__":
+    x = torch.randn(1024, 1024).cuda()
+    y = torch.randn(1024, 1024).cuda()
+    print(add(x, y))
