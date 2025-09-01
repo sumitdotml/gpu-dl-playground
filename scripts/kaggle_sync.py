@@ -116,17 +116,25 @@ exec(open('{script_name}').read())
 def create_git_sync_notebook():
     """Create a notebook that syncs from GitHub"""
 
-    # Get git remote URL
+    # Get git remote URL and ensure it's HTTPS for Kaggle compatibility
     try:
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"], capture_output=True, text=True
         )
         git_url = result.stdout.strip()
-        if git_url.startswith("git@"):
-            # Convert SSH to HTTPS
+        
+        # Convert SSH to HTTPS for Kaggle (no SSH keys available there)
+        if git_url.startswith("git@github.com:"):
             git_url = git_url.replace("git@github.com:", "https://github.com/")
+        elif git_url.startswith("git@github-"):
+            # Handle custom SSH hosts like git@github-sumitdotml:
+            git_url = git_url.split(":")[1]  # Extract user/repo part
+            git_url = f"https://github.com/{git_url}"
+            
+        # Remove .git suffix if present
         if git_url.endswith(".git"):
             git_url = git_url[:-4]
+            
     except:
         git_url = "https://github.com/YOUR_USERNAME/YOUR_REPO"
 
@@ -134,6 +142,8 @@ def create_git_sync_notebook():
 # This notebook automatically pulls your latest code from GitHub
 
 import os
+import subprocess
+import sys
 
 # =============================================================================
 # CONFIGURATION: Set which script to run
@@ -171,25 +181,105 @@ def run_script(script_path):
         print(f"Error running {{script_path}}: {{e}}")
         return False
 
-# Install dependencies
-!pip install triton -q
+def download_files():
+    \"\"\"Download files directly from GitHub using requests (fallback for git issues)\"\"\"
+    import requests
+    import tempfile
+    
+    base_url = "{git_url}"
+    files_to_download = [
+        'triton_kernels.py',
+        'test_workflow.py'
+    ]
+    
+    print("Git not available. Downloading files directly from GitHub...")
+    
+    # Create working directory
+    work_dir = '/kaggle/working/gpu-dl-playground'
+    os.makedirs(work_dir, exist_ok=True)
+    os.chdir(work_dir)
+    
+    success_count = 0
+    for filename in files_to_download:
+        try:
+            raw_url = f"{{base_url}}/raw/main/{{filename}}"
+            print(f"Downloading {{filename}}...")
+            
+            response = requests.get(raw_url, timeout=30)
+            response.raise_for_status()
+            
+            with open(filename, 'w') as f:
+                f.write(response.text)
+            
+            print(f"Successfully downloaded {{filename}}")
+            success_count += 1
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to download {{filename}}: {{e}}")
+        except Exception as e:
+            print(f"Error saving {{filename}}: {{e}}")
+    
+    if success_count > 0:
+        print(f"\\nSuccessfully downloaded {{success_count}}/{{len(files_to_download)}} files")
+        return True
+    else:
+        print("\\nFailed to download any files")
+        return False
 
-# Clone/pull latest code
-if os.path.exists('/kaggle/working/gpu-dl-playground'):
-    print("Repository exists, pulling latest changes...")
-    os.chdir('/kaggle/working/gpu-dl-playground')
-    !git pull
-else:
-    print("Cloning repository...")
-    os.chdir('/kaggle/working')
-    !git clone {git_url}.git
-    os.chdir('/kaggle/working/gpu-dl-playground')
+def get_code():
+    \"\"\"Get code using git or direct download fallback\"\"\"
+    repo_name = "gpu-dl-playground"
+    
+    # Try git first
+    if os.path.exists(f'/kaggle/working/{{repo_name}}'):
+        print("Repository exists, trying to pull latest changes...")
+        os.chdir(f'/kaggle/working/{{repo_name}}')
+        try:
+            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                print("Successfully updated repository")
+                return True
+            else:
+                print("Git pull failed, continuing with existing files...")
+                return True
+        except:
+            print("Git pull failed, continuing with existing files...")
+            return True
+    else:
+        print("Trying to clone repository...")
+        os.chdir('/kaggle/working')
+        
+        try:
+            result = subprocess.run(['git', 'clone', '{git_url}.git'], 
+                                  capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                print("Successfully cloned repository")
+                os.chdir(f'/kaggle/working/{{repo_name}}')
+                return True
+        except:
+            pass
+        
+        print("Git clone failed. Using direct download fallback...")
+        return download_files()
+
+# Install dependencies
+print("Installing dependencies...")
+!pip install triton requests -q
+
+# Get code (git or direct download)
+if not get_code():
+    print("\\nFailed to get code. Cannot proceed.")
+    sys.exit(1)
 
 # Check GPU
 import torch
-print(f'CUDA available: {{torch.cuda.is_available()}}')
+print(f'\\nCUDA available: {{torch.cuda.is_available()}}')
 if torch.cuda.is_available():
     print(f'   GPU: {{torch.cuda.get_device_name(0)}}')
+
+print(f"\\nCurrent directory: {{os.getcwd()}}")
+print(f"Repository contents:")
+!ls -la
 
 # Handle special commands
 if SCRIPT_TO_RUN == '--list':

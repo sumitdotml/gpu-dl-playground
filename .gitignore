@@ -62,3 +62,6 @@ lightning_git_runner.py
 lightning_quick_setup.sh
 lightning_web_runner.py
 dataset-metadata.json
+
+# Miscellaneous
+.lightning_studio/*
