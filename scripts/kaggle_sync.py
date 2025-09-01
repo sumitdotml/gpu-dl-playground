@@ -133,30 +133,69 @@ def create_git_sync_notebook():
     notebook_code = f"""# Kaggle GPU Sync Notebook
 # This notebook automatically pulls your latest code from GitHub
 
+import os
+
+# =============================================================================
+# CONFIGURATION: Set which script to run
+# =============================================================================
+SCRIPT_TO_RUN = 'triton_kernels.py'  # Change this to run different files
+# Examples:
+# SCRIPT_TO_RUN = 'test_workflow.py'
+# SCRIPT_TO_RUN = 'scripts/my_experiment.py'
+# SCRIPT_TO_RUN = 'experiments/model_training.py'
+# =============================================================================
+
+def list_python_files():
+    \"\"\"List all available Python files in the repository\"\"\"
+    print("Available Python files:")
+    for root, dirs, files in os.walk('.'):
+        for file in files:
+            if file.endswith('.py'):
+                filepath = os.path.join(root, file).replace('./', '')
+                print(f"  {{filepath}}")
+
+def run_script(script_path):
+    \"\"\"Run a Python script and handle errors\"\"\"
+    if not os.path.exists(script_path):
+        print(f"Error: Script '{{script_path}}' not found")
+        print("\\nTip: Set SCRIPT_TO_RUN = '--list' to see all available files")
+        list_python_files()
+        return False
+
+    print(f"Running {{script_path}}...")
+    try:
+        exec(open(script_path).read())
+        print(f"Successfully completed {{script_path}}")
+        return True
+    except Exception as e:
+        print(f"Error running {{script_path}}: {{e}}")
+        return False
+
 # Install dependencies
 !pip install triton -q
 
 # Clone/pull latest code
-import os
 if os.path.exists('/kaggle/working/gpu-dl-playground'):
-    print("📁 Repository exists, pulling latest changes...")
+    print("Repository exists, pulling latest changes...")
     os.chdir('/kaggle/working/gpu-dl-playground')
     !git pull
 else:
-    print("📥 Cloning repository...")
+    print("Cloning repository...")
     os.chdir('/kaggle/working')
     !git clone {git_url}.git
     os.chdir('/kaggle/working/gpu-dl-playground')
 
 # Check GPU
 import torch
-print(f'🖥️  CUDA available: {{torch.cuda.is_available()}}')
+print(f'CUDA available: {{torch.cuda.is_available()}}')
 if torch.cuda.is_available():
     print(f'   GPU: {{torch.cuda.get_device_name(0)}}')
 
-# Run your script (change this line as needed)
-print("🚀 Running your code...")
-exec(open('triton_kernels.py').read())
+# Handle special commands
+if SCRIPT_TO_RUN == '--list':
+    list_python_files()
+else:
+    run_script(SCRIPT_TO_RUN)
 """
 
     with open("kaggle_git_sync.py", "w") as f:
