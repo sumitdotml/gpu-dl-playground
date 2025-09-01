@@ -12,17 +12,25 @@ import sys
 def create_lightning_git_runner():
     """Create a Lightning runner that syncs from git"""
 
-    # Get git remote URL
+    # Get git remote URL and convert to HTTPS for Lightning compatibility
     try:
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"], capture_output=True, text=True
         )
         git_url = result.stdout.strip()
-        if git_url.startswith("git@"):
-            # Convert SSH to HTTPS
+
+        # Convert SSH to HTTPS for Lightning (no SSH keys available there)
+        if git_url.startswith("git@github.com:"):
             git_url = git_url.replace("git@github.com:", "https://github.com/")
+        elif git_url.startswith("git@github-"):
+            # Handle custom SSH hosts like git@github-sumitdotml:
+            git_url = git_url.split(":")[1]  # Extract user/repo part
+            git_url = f"https://github.com/{git_url}"
+
+        # Remove .git suffix if present
         if git_url.endswith(".git"):
             git_url = git_url[:-4]
+
     except:
         git_url = "https://github.com/YOUR_USERNAME/YOUR_REPO"
 
@@ -93,17 +101,64 @@ if __name__ == "__main__":
     os.chmod("lightning_git_runner.py", 0o755)
 
     # Create simple setup script for Lightning Studio
-    setup_content = """#!/bin/bash
+    setup_content = f"""#!/bin/bash
 # Lightning AI Studio Quick Setup
 # Just run this script in Lightning Studio with GPU enabled
 
-echo "⚡ Lightning AI Quick Setup"
+set -e
 
-# Install git if not available
-which git || apt-get update && apt-get install -y git
+echo "Lightning AI Quick Setup"
 
-# Run the git sync runner
-python3 lightning_git_runner.py "$@"
+# Check if git is available (should be pre-installed)
+if ! command -v git &> /dev/null; then
+    echo "Error: git not found. Please contact Lightning AI support."
+    exit 1
+fi
+
+echo "Git found: $(git --version)"
+
+# Install dependencies
+echo "Installing dependencies..."
+pip install triton torch matplotlib numpy jupyter ipython --quiet
+
+# Get the repository URL
+REPO_URL="{git_url}.git"
+REPO_DIR="gpu-dl-playground"
+
+# Clone or update repository
+if [ -d "$REPO_DIR" ]; then
+    echo "Repository exists. Pulling latest changes..."
+    cd "$REPO_DIR"
+    git pull
+    echo "Repository updated successfully!"
+else
+    echo "Cloning repository..."
+    git clone "$REPO_URL"
+    cd "$REPO_DIR"
+    echo "Repository cloned successfully!"
+fi
+
+echo ""
+echo "Environment ready! Current directory: $(pwd)"
+echo "Available Python files:"
+find . -name "*.py" -type f | head -10
+
+echo ""
+echo "GPU Status:"
+nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv,noheader,nounits 2>/dev/null || echo "GPU info not available"
+
+echo ""
+echo "To run your code:"
+echo "  python triton_kernels.py"
+echo "  python test_workflow.py"
+echo ""
+echo "Setup completed!"
+
+# Run script if provided as argument
+if [ $# -gt 0 ]; then
+    echo "Running $1..."
+    python "$1"
+fi
 """
 
     with open("lightning_quick_setup.sh", "w") as f:
@@ -183,11 +238,13 @@ def run_from_github(github_url, script_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Seamless Lightning AI code sync")
+    parser = argparse.ArgumentParser(
+        description="Seamless Lightning AI code sync")
     parser.add_argument(
         "--git-sync", action="store_true", help="Create git sync runner"
     )
-    parser.add_argument("--web-runner", action="store_true", help="Create web runner")
+    parser.add_argument("--web-runner", action="store_true",
+                        help="Create web runner")
 
     args = parser.parse_args()
 
