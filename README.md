@@ -1,27 +1,71 @@
 # GPU Deep Learning Playground
 
-My learning log for the fundamentals of GPU programming and deep learning optimization by exploring GPU acceleration for deep learning: documentation, implementations, and best practices for CUDA and Triton.
+**Seamless Mac to GPU workflow for Triton kernel development**
 
-The weeks are numbered from 0 to 8, but I'm pretty sure this is not going to be a week-by-week linear path. I've got other things I need to be doing within my pursuit of studying & building, but I'm going to try to make time to do this. Hoping to complete this by the end of the year.
+## Quick Start
+
+```bash
+# 1. Setup environment
+uv run ./scripts/setup_local_dev.sh
+
+# 2. Generate sync tools
+uv run python scripts/kaggle_sync.py --git-sync
+uv run python scripts/lightning_sync.py --git-sync
+
+# 3. Code locally, push to GitHub
+git add . && git commit -m "Add kernels" && git push
+
+# 4. Run on GPU using generated sync scripts
+```
+
+## Seamless Workflow
+
+1. **Write locally** - Full IDE support, Triton syntax highlighting
+2. **Push changes** - `git push` (5 seconds)
+3. **Run on GPU** - Paste sync script in Kaggle/Lightning (25 seconds)
+4. **Iterate fast** - Zero manual file transfers
+
+### GPU Platforms
+
+- **Kaggle**: 30h/week free, T4 GPUs
+- **Lightning AI**: 22h/month free, various GPUs
+
+## Project Structure
+
+```
+gpu-dl-playground/
+├── triton_kernels.py           # Triton code
+├── test_workflow.py            # Test script
+└── scripts/
+    ├── setup_local_dev.sh      # One-time local setup
+    ├── kaggle_sync.py          # Generate Kaggle sync tools
+    └── lightning_sync.py       # Generate Lightning sync tools
+```
+
+---
+
+## 8-Week Learning Plan
+
+Learning log for GPU programming fundamentals and deep learning optimization. Exploring GPU acceleration for deep learning: documentation, implementations, and best practices for CUDA and Triton.
+
+The weeks are numbered from 0 to 8, but this is not going to be a strict week-by-week linear path. I have other things we need to be doing within studying and building, but I'll try to make time for this. Planning to complete this by the end of the year.
 
 ## Phase 0: Prerequisites (Week 0)
 
 Before diving into GPU programming, the following would be helpful:
 
 1. **Programming Knowledge:**
-
    - Proficient in C++ (for CUDA) and Python (for Triton)
    - Understanding of basic data structures and algorithms
    - Familiarity with linear algebra concepts (matrices, vectors, transformations)
 
 2. **Hardware Understanding:**
-
    - Basic computer architecture concepts
    - Understanding the difference between CPU and GPU execution models
-   - Access to an NVIDIA GPU (preferably with Tensor Cores - Volta architecture or newer). _See Mac Setup Guide if using Apple Silicon._
+   - Access to an NVIDIA GPU (preferably with Tensor Cores - Volta architecture or newer). _Note: Apple Silicon users need remote GPU access._
 
 3. **Development Environment:**
-   - Linux-based system (preferred) or Windows with WSL for native CUDA execution. For users on Apple Silicon (M-series) Macs, see **[Mac Setup Guide for CUDA/Triton Development](MAC_SETUP_GUIDE.md)** for important notes on working with NVIDIA GPU technologies via remote/cloud resources.
+   - Linux-based system (preferred) or Windows with WSL for native CUDA execution. Apple Silicon (M-series) Mac users need remote/cloud GPU resources for CUDA/Triton execution.
    - Code editor/IDE of choice (VSCode recommended with CUDA extensions)
    - Git for version control
    - Familiarity with using a terminal/command line.
@@ -51,7 +95,7 @@ _Note: Phase 1 covers many foundational and advanced topics. The goal in these i
    - Thread hierarchy (threads < blocks < grid)
    - Memory hierarchy (global, shared, registers) - _Why is shared faster? What are their scopes & lifetimes?_
    - SIMT (Single Instruction, Multiple Threads) execution model & concept of warps - _Key for understanding warp behavior and divergence._
-   - Basic awareness of my target GPU architecture (SM count, memory bandwidth, L1/L2 cache sizes).
+   - Basic awareness of target GPU architecture (SM count, memory bandwidth, L1/L2 cache sizes).
 3. Write first kernels:
    - Vector addition (CPU vs GPU baseline)
    - Simple element-wise operations (e.g., scalar multiplication, ReLU activation) - _Start with these for basic kernel launch and data handling._
@@ -72,9 +116,9 @@ Resources:
 3. Shared Memory: _Purpose and benefits. Understand its explicit management by the programmer._
 4. Shared Memory Tiling for Matrix Multiplication: Implement matrix multiplication using shared memory to load tiles of input matrices. _This is a cornerstone CUDA optimization pattern._
 5. Bank Conflicts in Shared Memory: _What are they and how to avoid them for optimal shared memory throughput?_
-6. Basic Profiling: Introduce Nsight Compute. Profile my naive and shared-memory matrix multiplication kernels. Look at memory throughput, instruction execution, and basic bottleneck identification.
-7. Understanding memory bandwidth vs. computational throughput (e.g., theoretical peak FLOPs and bandwidth of my GPU). _Compare my kernel's performance against these._
-8. **Memory footprint analysis** - Understanding and measuring how much global/shared memory my kernels use.
+6. Basic Profiling: Introduce Nsight Compute. Profile naive and shared-memory matrix multiplication kernels. Look at memory throughput, instruction execution, and basic bottleneck identification.
+7. Understanding memory bandwidth vs. computational throughput (e.g., theoretical peak FLOPs and bandwidth of target GPU). _Compare kernel performance against these._
+8. **Memory footprint analysis** - Understanding and measuring how much global/shared memory kernels use.
    - Tools: `cudaMemGetInfo()`, Nsight Memory Profiler basics.
 
 Resources:
@@ -103,7 +147,7 @@ Resources:
 
 ### Week 4 - Triton Basics & Benchmarking Framework:
 
-1. Install Triton + PyTorch integration (on my CUDA-enabled machine/VM).
+1. Install Triton + PyTorch integration (on CUDA-enabled machine/VM).
 2. Learn Triton DSL:
    - `@triton.jit` decorator, kernel launch syntax.
    - `tl.load`/`tl.store` (masked and unmasked), `tl.make_block_ptr`.
@@ -120,7 +164,7 @@ Resources:
      - Memory usage (if measurable simply).
      - Computational throughput (GFLOPs/s).
      - Bandwidth utilization (GB/s).
-   - Compare implementations across: PyTorch native, my CUDA kernels, my Triton kernels.
+   - Compare implementations across: PyTorch native, CUDA kernels, Triton kernels.
    - Add qualitative comparison dimensions:
      - Lines of Code (LOC) complexity.
      - Estimated Development time.
@@ -238,10 +282,10 @@ Implement a custom Transformer variant or another DL model component that presen
    - OpenAI Triton Kernels repository - _Excellent practical examples_.
    - Kernels generated by `torch.compile` (explore the generated code if possible).
    - Other open-source high-performance libraries (e.g., CUTLASS, xFormers) and relevant research papers.
-5. **Maintain a Learning Log/Portfolio:** Document progress, challenges, solutions, key learnings, and link to my implemented kernels (e.g., on GitHub).
-6. **Seek & Offer Peer Code Reviews:** If possible, have my CUDA/Triton code reviewed. Join online communities; sharing and explaining my work solidifies understanding.
+5. **Maintain a Learning Log/Portfolio:** Document progress, challenges, solutions, key learnings, and link to implemented kernels (e.g., on GitHub).
+6. **Seek & Offer Peer Code Reviews:** If possible, have CUDA/Triton code reviewed. Join online communities; sharing and explaining work solidifies understanding.
 7. **Regular Incremental Progress:** Set small, achievable weekly goals rather than trying to optimize everything at once.
-8. **Hardware Awareness & Continuous Learning:** Always keep my target hardware architecture in mind. GPU architectures evolve (Hopper, Blackwell, etc.), bringing new features, performance characteristics, and compiler behaviors; continuous learning is key.
+8. **Hardware Awareness & Continuous Learning:** Always keep target hardware architecture in mind. GPU architectures evolve (Hopper, Blackwell, etc.), bringing new features, performance characteristics, and compiler behaviors; continuous learning is key.
 9. **Don't be afraid to experiment:** Breaking things and debugging them is a core part of the learning process. Understand _why_ things broke.
 
 ## Weekly Time Commitment
